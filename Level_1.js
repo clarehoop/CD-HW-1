@@ -2,14 +2,16 @@ const Level1 = function () {
   const canvas = document.getElementById("canvas");
   const ctx = canvas.getContext("2d");
 
-  const SPEED = 0.15;          // automatic forward speed (units/frame)
-  const TRACK_LENGTH = 60;     // how far ahead the world extends before recycling
+  //set my game play constants and variables
+  const SPEED = 0.15;        
+  const TRACK_LENGTH = 60;    
   const HIT_DISTANCE = 1.5;
   const hazardModels = ["cliffs", "coral", "fish"];
 
   let objects, camera, startCam, health, score, pause, gameOver, restartTimer, flashTimer, invulnTimer;
   let animationId;
 
+  //reuse of draw function from HW1 with some tweaks
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#050510";
@@ -21,7 +23,7 @@ const Level1 = function () {
 
       for (let v of model.vertices) {
         let ocean = {
-          x: v.x * obj.scale + obj.position.x,
+          x: v.x * obj.scale + obj.position.x, //changed to allow for objects to be scaled and moved
           y: v.y * obj.scale + obj.position.y,
           z: v.z * obj.scale + obj.position.z
         };
@@ -31,6 +33,7 @@ const Level1 = function () {
           z: ocean.z - camera.z
         };
 
+        //had to add so that when im passing objects they dont extend towards origin
         if (camVert.z <= 0.1) { projectedVertices.push(null); continue; }
 
         let canvasPos = {};
@@ -40,9 +43,9 @@ const Level1 = function () {
       }
 
       for (let e of model.edges) {
-        let p1 = projectedVertices[e[0]];
+        let p1 = projectedVertices[e[0]]; 
         let p2 = projectedVertices[e[1]];
-        if (!p1 || !p2) continue; // skip edges touching a near-clipped vertex
+        if (!p1 || !p2) continue; // skip edges touching a near-clipped vertex so doesnt extend towards origin
 
         let u1 = p1.u, v1 = canvas.height - p1.v;
         let u2 = p2.u, v2 = canvas.height - p2.v;
@@ -63,12 +66,7 @@ const Level1 = function () {
     ctx.stroke();
   }
 
-  // -----------------------------------------------------------------
-  // COCKPIT OVERLAY -- same geometry/proportions as Level 2 & 3's
-  // drawCockpit(), just issued as direct ctx calls (moveTo/lineTo/
-  // strokeRect) instead of the pixel rasterizer, since Level 1 draws
-  // straight to the real canvas rather than a 320x200 logical grid.
-  // -----------------------------------------------------------------
+  //cockpit overlay so it can look similar to the star wars trench run we saw in class
   function drawCockpit() {
     const w = canvas.width;
     const h = canvas.height;
@@ -79,8 +77,7 @@ const Level1 = function () {
     ctx.strokeStyle = cockpitColor;
     ctx.lineWidth = 3;
 
-    // top + bottom struts converging at the same point on each side
-    // (the "hourglass" frame shape used in Levels 2 & 3)
+    // top + bottom lines converging at the same point on each side
     line(0, 0, w * 0.22, h * 0.65);
     line(0, h, w * 0.22, h * 0.65);
     line(w, 0, w * 0.78, h * 0.65);
@@ -102,7 +99,7 @@ const Level1 = function () {
       line(w * 0.42, y, w * 0.58, y);
     }
 
-    // hit flash across the windshield area
+    // hit flash when hazard obj hit across the windshield area
     if (flashTimer > 0) {
       ctx.fillStyle = `rgba(255, 40, 40, ${(flashTimer / 15) * 0.35})`;
       ctx.fillRect(0, 0, w, h * 0.65);
@@ -119,8 +116,7 @@ const Level1 = function () {
     }
   }
 
-  // matches Level 2/3's drawHUD() layout exactly: top-center
-  // SCORE/HEALTH line, centered PAUSED / GAME OVER text
+  // HUD si game players knows how many lives they have and also their score.
   function drawHUD() {
     const w = canvas.width, h = canvas.height;
     ctx.save();
@@ -141,7 +137,7 @@ const Level1 = function () {
     }
     ctx.restore();
   }
-
+  // constantly update the camera and score so that it appears to the user that they are "flying" thru my game
   function update() {
     if (pause || gameOver) return;
     camera.z += SPEED;
@@ -158,6 +154,7 @@ const Level1 = function () {
     }
   }
 
+  //game function added so that if a player hits a hazard object (fish,coral,rock) they are penalized
   function checkCollisions() {
     if (pause || gameOver) return;
     if (invulnTimer > 0) { invulnTimer--; return; }
@@ -165,11 +162,12 @@ const Level1 = function () {
     for (let obj of objects) {
       if (!hazardModels.includes(obj.model)) continue;
 
+      //calcute position of my objects so that i know how close they are to my camera
       let dx = obj.position.x - camera.x;
       let dy = obj.position.y - camera.y;
       let dz = obj.position.z - camera.z;
       let dist = Math.sqrt(dx * dx + dy * dy + dz * dz) / obj.scale;
-
+      //if they are closer than the hit dist const, they are penalized and then if they lose all 3 lives, GAME OVER 
       if (dist < HIT_DISTANCE) {
         health = health - 1;
         flashTimer = 15;
@@ -182,7 +180,7 @@ const Level1 = function () {
       }
     }
   }
-
+  //reset game basically just to begining presets so users can play multiple rounds
   function resetGame() {
     camera = { ...startCam };
     health = 3;
@@ -198,7 +196,7 @@ const Level1 = function () {
       }
     }
   }
-
+// my key bindings! similar to HW1 but adding funtionality for pause and R now calls my reset game function
   function handleKeyDown(event) {
     event.preventDefault();
     switch (event.code) {
@@ -215,7 +213,7 @@ const Level1 = function () {
       default: return;
     }
   }
-
+  //game loop needed to control all my functions into final playable game
   function gameLoop() {
     if (gameOver) {
       restartTimer--;
@@ -232,7 +230,7 @@ const Level1 = function () {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
   }
-
+  //init needed so that i could abstract all my levels out of the html
   function init() {
     camera = { x: 0, y: 0, z: -10 };
     startCam = { x: 0, y: 0, z: -10 };
