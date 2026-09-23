@@ -1,14 +1,17 @@
+//basically copy paste from level 1
+//game play stays the same but my line drawing changes to pixelation functino
 const Level2 = function () {
 
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
+//consts for screen set up and game play like b4
 const cols = 320;
 const rows = 200;
 let  PIXEL_SIZE = 5;
-const SPEED = 0.15;          // automatic forward speed (units/frame)
-const TRACK_LENGTH = 60;     // how far ahead the world extends before recycling
+const SPEED = 0.15;          
+const TRACK_LENGTH = 60;     
 const HIT_DISTANCE = 1.5;
 const hazardModels = ["cliffs", "coral", "fish"];
 
@@ -16,31 +19,26 @@ let objects, initialHazardPositions, pixelGrid;
 let camera, startCam, health, score, pause, gameOver, restartTimer, flashTimer, invulnTimer;
 let animationId;
 
+
 function clearPixelGrid() {
     for (let u = 0; u < cols; u++) {
       pixelGrid[u].fill("#050510");
     }
 }
-  
-  function setPixelColor(u, v, color) {
-  
+//function to decide if i should "turn on" a pixel inspiration taken from the inclass activity
+function setPixelColor(u, v, color) {
     u = Math.round(u);
     v = Math.round(v);
-  
-    if (u < 0 || u >= cols || v < 0 || v >= rows) {
-      return;
-    }
-  
+    if (u < 0 || u >= cols || v < 0 || v >= rows) return;
     pixelGrid[u][v] = color;
 }
   
   
-  // Custom line rasterizer
+// replacing my draw line function for requirements for level 2 (also took some help from the inclass activity here) 
 function makePixelatedLine(u1, v1, u2, v2, color) {
-  
     let du = u2 - u1;
     let dv = v2 - v1;
-  
+    
     if (Math.abs(du) >= Math.abs(dv)) {
   
       if (u1 > u2) {
@@ -80,7 +78,7 @@ function makePixelatedLine(u1, v1, u2, v2, color) {
       }
     }
 }
-  // LEVEL 2 CHANGE: Draw a line using logical pixel coordinates
+  // also needed to change how i would draw my cockpit so now draw the line using logical pixel coordinates
 function cockpitLine(x1, y1, x2, y2, color) {
     makePixelatedLine(
       Math.round(x1),
@@ -91,53 +89,51 @@ function cockpitLine(x1, y1, x2, y2, color) {
     );
   }
   
-  // LEVEL 2 CHANGE: Draw a rectangle using four pixelated lines
+  // again as stated above need to 'draw' the cockpit rectangle with pixel coordinates
   function cockpitRect(x, y, width, height, color) {
     cockpitLine(x, y, x + width, y, color);
     cockpitLine(x + width, y, x + width, y + height, color);
     cockpitLine(x + width, y + height, x, y + height, color);
     cockpitLine(x, y + height, x, y, color);
   }
+  //now can re draw my cockpit
   function drawCockpit() {
-    // Logical canvas dimensions
+    
     const w = cols;
     const h = rows;
   
     const cockpitColor = "#2f6fb0";
     const panelColor = "#3b82a0";
-  // --------------------------------
-  // MAIN COCKPIT FRAME (Wider Struts)
-  // --------------------------------
 
-  // Left diagonal strut (Framing screen from top-left)
+  // left diagonal line 
   cockpitLine(0, 0, w * 0.22, h * 0.65, cockpitColor);
   cockpitLine(0, h, w * 0.22, h * 0.65, cockpitColor);
 
-  // Right diagonal strut (Framing screen from top-right)
+  // right diagonal line
   cockpitLine(w, 0, w * 0.78, h * 0.65, cockpitColor);
   cockpitLine(w, h, w * 0.78, h * 0.65, cockpitColor);
 
-  // Horizontal frame connecting lower view
+  // horizontal frame connecting lower view
   cockpitLine(w * 0.22, h * 0.65, w * 0.78, h * 0.65, cockpitColor);
 
-  // --------------------------------
-  // LOWER CONTROL PANEL
-  // --------------------------------
+
+  // lower control panek
   cockpitRect(w * 0.15, h * 0.65, w * 0.70, h * 0.35, cockpitColor);
 
-  // Left & Right Instrument Gauges
+  // left & right instrument gauges
   cockpitRect(w * 0.18, h * 0.70, w * 0.20, h * 0.22, panelColor);
   cockpitRect(w * 0.62, h * 0.70, w * 0.20, h * 0.22, panelColor);
 
-  // Center Dash Scan Lines
+  // center dash scan lines
   for (let y = h * 0.72; y <= h * 0.88; y += 4) {
     cockpitLine(w * 0.42, y, w * 0.58, y, panelColor);
   }
   }
 
-
+//drawing 5 x 5 pixel grid
+// i did abstract the 5 into pixel size for clarity from in class activity
 function drawPixelGrid() {
-      // Clear the entire canvas
+  // Clear the entire canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   ctx.fillStyle = "#050510";
@@ -160,6 +156,7 @@ function drawPixelGrid() {
 
       
   }}}
+  //same as level 1: game play for user to track score and health
   function drawHUD() {
     const w = canvas.width;
     const h = canvas.height;
@@ -185,6 +182,7 @@ function drawPixelGrid() {
     }
     ctx.restore();
   }
+  //basically level 1 but again implementing new pixelated line function
   function draw() {
 
     clearPixelGrid();
@@ -216,7 +214,7 @@ function drawPixelGrid() {
           continue;
         }
   
-        // Logical 320 x 200 projection
+        
         let u = (camVert.x / camVert.z) * cols + cols / 2;
   
         let vScreen = rows / 2 -
@@ -250,9 +248,10 @@ function drawPixelGrid() {
     drawPixelGrid();
     
     drawHUD();
-    // Existing cockpit overlay
+   
     
   }
+  //gameplay function from level 1
 function update() {
   if (pause || gameOver) return;
   camera.z += SPEED;
@@ -262,7 +261,7 @@ function update() {
     let dz = obj.position.z - camera.z;
     if (dz < -2) {
       obj.position.z += TRACK_LENGTH;
-      // re-randomize hazard x slightly so it's not identical every lap
+      
       if (hazardModels.includes(obj.model)) {
         obj.position.x = Math.random() * 8 - 4;
       }
@@ -270,10 +269,7 @@ function update() {
   }
 }
 
-// -----------------------------------------------------------------
-// COLLISION -- distance-based, with a brief immunity window after
-// a hit so health doesn't drain across multiple frames from one hit.
-// -----------------------------------------------------------------
+//game play function from level 1
 function checkCollisions() {
 if (pause || gameOver) return;
 
@@ -301,7 +297,7 @@ if (pause || gameOver) return;
   }
 }
 
-
+//game play function from level 1
 function resetGame(){
   camera = {...startCam};
 
@@ -319,6 +315,7 @@ function resetGame(){
     item.obj.position.z = item.z;
   }
 }
+//resize canvas but keeping in mind pixel grid
 function resizeCanvas(){
     const availableW = window.innerWidth;
     const availableH = window.innerHeight - 60;
@@ -329,12 +326,12 @@ function resizeCanvas(){
     canvas.width = cols * PIXEL_SIZE;
     canvas.height = rows * PIXEL_SIZE;
 }
-
+//key bindings are the same
 function handleKeyDown(event) {
     event.preventDefault();
     switch (event.code) {
-      case "ArrowLeft":  camera.x -= 0.5; break; // dodge left
-      case "ArrowRight": camera.x += 0.5; break; // dodge right
+      case "ArrowLeft":  camera.x -= 0.5; break; 
+      case "ArrowRight": camera.x += 0.5; break;
       case "ArrowDown": camera.y -= 0.5; break;
       case "ArrowUp": camera.y += 0.5; break;
       case "Space": 
@@ -348,6 +345,7 @@ function handleKeyDown(event) {
       default: return;
     }
   }
+  //game play loop
 function gameLoop() {
     if (gameOver) {
       restartTimer--;
@@ -364,6 +362,7 @@ function gameLoop() {
   
     animationID = requestAnimationFrame(gameLoop);
   }
+//init function for abstraction from html
 function init() {
     camera = { x: 0, y: 0, z: -10 };
     startCam = { x: 0, y: 0, z: -10 };
