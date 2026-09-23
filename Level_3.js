@@ -160,7 +160,7 @@ const Level3 = function () {
           bc2 = bc2/ area;
   
           //interpolate inverse depth across the triangle
-          const invZ = w0 * p0.invZ + w1 * p1.invZ + w2 * p2.invZ;
+          const invZ = bc0 * p0.invZ + bc1 * p1.invZ + bc2 * p2.invZ;
   
           // i need a depth test to only draw if this surface is closer than whatever is already stored at this pixel
           if (invZ > depthBuffer[u][v]) {
