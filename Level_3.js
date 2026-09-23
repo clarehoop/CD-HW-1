@@ -2,7 +2,8 @@ const Level3 = function () {
 
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
-  
+
+    //consts and variables again
     const cols = 320;
     const rows = 200;
     let PIXEL_SIZE = 5;
@@ -15,14 +16,14 @@ const Level3 = function () {
     let camera, startCam, health, score, pause, gameOver, restartTimer, flashTimer, invulnTimer;
     let animationId;
   
-    // -----------------------------------------------------------------
-    // PIXEL BUFFER -- same idea as Level 2: a 320x200 logical grid,
-    // drawn as PIXEL_SIZE x PIXEL_SIZE rects. depthBuffer is a second
-    // grid of the same size, storing 1/z (inverse camera-space depth)
-    // per pixel -- LARGER invZ means CLOSER to the camera. Starting it
-    // at 0 means "nothing drawn here yet / infinitely far away", so any
-    // real surface (invZ > 0) will beat it on the first write.
-    // -----------------------------------------------------------------
+// still 320x200 grid again, same as Level 2, just drawn bigger with PIXEL_SIZE squares 
+// depthBuffer is a second grid the same size that keeps track of how close the closest thing drawn
+// at each pixel is, so closer stuff can draw over farther stuff
+//
+// im storing 1/z instead of z (bigger number = closer to camera)
+// Starts at 0 everywhere (nothing drawn yet / "infinitely far"), so
+// literally anything real will beat it the first time something tries to draw there.
+
     function clearBuffers() {
       for (let u = 0; u < cols; u++) {
         pixelGrid[u].fill("#050510");
@@ -30,6 +31,7 @@ const Level3 = function () {
       }
     }
   
+    // same as level 2
     function setPixelColor(u, v, color) {
       u = Math.round(u);
       v = Math.round(v);
@@ -37,25 +39,51 @@ const Level3 = function () {
       pixelGrid[u][v] = color;
     }
   
-    // Custom line rasterizer -- used only for the cockpit overlay here;
-    // the 3D scene itself is drawn entirely via filled triangles below.
+    // reusing my level 2 makepixelated line and drawing only for the cockpit overlay here;
+    // 3D scene is drawn  via filled triangles below
     function makePixelatedLine(u1, v1, u2, v2, color) {
       let du = u2 - u1;
       let dv = v2 - v1;
-  
+      
       if (Math.abs(du) >= Math.abs(dv)) {
-        if (u1 > u2) { [u1, u2] = [u2, u1]; [v1, v2] = [v2, v1]; du = u2 - u1; dv = v2 - v1; }
+    
+        if (u1 > u2) {
+          [u1, u2] = [u2, u1];
+          [v1, v2] = [v2, v1];
+    
+          du = u2 - u1;
+          dv = v2 - v1;
+        }
+    
         const m = du === 0 ? 0 : dv / du;
+    
         let v = v1;
-        for (let u = u1; u <= u2; u++) { setPixelColor(u, Math.round(v), color); v += m; }
+    
+        for (let u = u1; u <= u2; u++) {
+          setPixelColor(u, Math.round(v), color);
+          v += m;
+        }
+    
       } else {
-        if (v1 > v2) { [u1, u2] = [u2, u1]; [v1, v2] = [v2, v1]; du = u2 - u1; dv = v2 - v1; }
+    
+        if (v1 > v2) {
+          [u1, u2] = [u2, u1];
+          [v1, v2] = [v2, v1];
+    
+          du = u2 - u1;
+          dv = v2 - v1;
+        }
+    
         const mInv = dv === 0 ? 0 : du / dv;
+    
         let u = u1;
-        for (let v = v1; v <= v2; v++) { setPixelColor(Math.round(u), v, color); u += mInv; }
+    
+        for (let v = v1; v <= v2; v++) {
+          setPixelColor(Math.round(u), v, color);
+          u += mInv;
+        }
       }
-    }
-  
+  }
     function cockpitLine(x1, y1, x2, y2, color) {
       makePixelatedLine(Math.round(x1), Math.round(y1), Math.round(x2), Math.round(y2), color);
     }
@@ -85,63 +113,56 @@ const Level3 = function () {
       }
     }
   
-    // -----------------------------------------------------------------
-    // TRIANGLE FILL -- edge-function rasterization with a depth test.
-    //
-    // For three 2D screen points a, b, c, the "edge function"
-    //   E(a,b,p) = (p.u-a.u)*(b.v-a.v) - (p.v-a.v)*(b.u-a.u)
-    // is proportional to twice the signed area of triangle (a,b,p).
-    // Its SIGN tells you which side of line a->b the point p is on.
-    // A point is inside the triangle exactly when it's on the same
-    // side of all 3 edges -- i.e. E(a,b,p), E(b,c,p), E(c,a,p) all
-    // share the same sign (or are zero, meaning "on the edge").
-    //
-    // Those same 3 edge-function values, once normalized by the
-    // triangle's total area, ARE the barycentric weights (w0,w1,w2)
-    // -- they tell you how much each of the 3 corners contributes to
-    // point p. That's what lets us interpolate depth smoothly across
-    // the triangle's interior instead of only knowing depth at the
-    // 3 corners.
-    //
-    // Depth itself is interpolated as 1/z (inverse depth) rather than
-    // z directly, because 1/z is linear (affine) in screen space under
-    // a perspective projection, while z itself is not -- interpolating
-    // z directly would warp faces that are angled toward the camera.
-    // -----------------------------------------------------------------
+    
+  // ok for level 3 we need to use triangles to fill
+  //  im using  3 half planes approach from class and HW
+  // 1. so a has triangle p0, p1, p2 and some point p, i'll split p into 3 smaller triangles: (p1,p2,p), (p2,p0,p), (p0,p1,p) 
+  // 2. each of the smaller triangles have an area, and that area will tells me which side of that edge p is on
+  //(positive or negative) 
+  // so if all the areas are the same sign i can cover that pixel bc it is in the triangle, if they're not then i know it's outside the triangle
+
+  //then i need to find my barycentric  coordinates by taking those 3 half plane areas divided by whole triangle area for future coloring and depth
+  // for depth i decided to interpolate 1/z not z, as z could make it appear warped as camera is moving
+  // 1/z will interpolate the bcs to use as my z buffer value (basically bigger invz is closer to camera)
+
     function edgeFn(ax, ay, bx, by, px, py) {
       return (px - ax) * (by - ay) - (py - ay) * (bx - ax);
     }
   
     function fillTriangle(p0, p1, p2, color) {
-      const area = edgeFn(p0.u, p0.v, p1.u, p1.v, p2.u, p2.v);
-      if (area === 0) return; // degenerate (zero-area) triangle -- skip
-  
+      const area = edgeFn(p0.u, p0.v, p1.u, p1.v, p2.u, p2.v); //get my FULL triangle are
+      if (area === 0) return; 
+      
+      //set my box to check in (don't want to check full screen)
       const minU = Math.max(0, Math.floor(Math.min(p0.u, p1.u, p2.u)));
       const maxU = Math.min(cols - 1, Math.ceil(Math.max(p0.u, p1.u, p2.u)));
       const minV = Math.max(0, Math.floor(Math.min(p0.v, p1.v, p2.v)));
       const maxV = Math.min(rows - 1, Math.ceil(Math.max(p0.v, p1.v, p2.v)));
-  
+      //start my planing and barycentric coordinate find
       for (let v = minV; v <= maxV; v++) {
         for (let u = minU; u <= maxU; u++) {
-          const px = u + 0.5, py = v + 0.5; // sample pixel centers
+          const px = u + 0.5, py = v + 0.5; // pixel centers
+          
+          //find my areas of my three half planes
+          let bc0 = edgeFn(p1.u, p1.v, p2.u, p2.v, px, py);
+          let bc1 = edgeFn(p2.u, p2.v, p0.u, p0.v, px, py);
+          let bc2 = edgeFn(p0.u, p0.v, p1.u, p1.v, px, py);
   
-          let w0 = edgeFn(p1.u, p1.v, p2.u, p2.v, px, py);
-          let w1 = edgeFn(p2.u, p2.v, p0.u, p0.v, px, py);
-          let w2 = edgeFn(p0.u, p0.v, p1.u, p1.v, px, py);
-  
-          // inside test: all 3 weights must share the triangle's winding sign
+          // check if they all share same sign 
+          //if they do continue
           const inside = area > 0
-            ? (w0 >= 0 && w1 >= 0 && w2 >= 0)
-            : (w0 <= 0 && w1 <= 0 && w2 <= 0);
+            ? (bc0 >= 0 &&bc1 >= 0 && bc2 >= 0)
+            : (bc0 <= 0 && bc1 <= 0 && bc2 <= 0);
           if (!inside) continue;
+          //now set the areas over the full triangle to get barcyentric coordinates
+          bc0 = bc0 / area; 
+          bc1 = bc1 / area; 
+          bc2 = bc2/ area;
   
-          w0 /= area; w1 /= area; w2 /= area;
-  
-          // interpolate inverse depth across the triangle
+          //interpolate inverse depth across the triangle
           const invZ = w0 * p0.invZ + w1 * p1.invZ + w2 * p2.invZ;
   
-          // depth test: only draw if this surface is closer than
-          // whatever is already stored at this pixel
+          // i need a depth test to only draw if this surface is closer than whatever is already stored at this pixel
           if (invZ > depthBuffer[u][v]) {
             depthBuffer[u][v] = invZ;
             pixelGrid[u][v] = color;
@@ -150,7 +171,7 @@ const Level3 = function () {
       }
     }
   
-    // simple flat (Lambertian-style) shading: darken a hex color by a
+    // simple flat shading basically darken a hex color by a
     // 0..1 factor, so faces angled away from the light read as dimmer
     function shade(hex, factor) {
       const r = parseInt(hex.slice(1, 3), 16);
@@ -159,13 +180,15 @@ const Level3 = function () {
       const f = Math.max(0.35, Math.min(1, factor));
       return `rgb(${Math.round(r * f)}, ${Math.round(g * f)}, ${Math.round(b * f)})`;
     }
-  
+    // set my light direction so i know where to shade as well
     const LIGHT_DIR = normalize({ x: 0.4, y: 0.8, z: -0.4 });
+
+    //normalize my vector so i can dot product it with light dir and for faces
     function normalize(v) {
       const len = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
       return { x: v.x / len, y: v.y / len, z: v.z / len };
     }
-  
+    // reused
     function drawPixelGrid() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#050510";
@@ -178,7 +201,7 @@ const Level3 = function () {
         }
       }
     }
-  
+    // reused
     function drawHUD() {
       const w = canvas.width, h = canvas.height;
       ctx.save();
@@ -199,7 +222,7 @@ const Level3 = function () {
       }
       ctx.restore();
     }
-  
+    // now time to draw
     function draw() {
       clearBuffers();
   
@@ -223,10 +246,7 @@ const Level3 = function () {
             z: world.z - camera.z
           };
   
-          // simple near-plane handling: if ANY vertex of this object is
-          // behind the camera, skip the whole object this frame rather
-          // than attempting per-triangle clipping (a known simplification --
-          // fine for this project's scope, worth noting in documentation)
+          // so to deal with near planing i just decided to skip the whole object if any vertice is behind camera
           if (camVert.z <= 0.1) { skipObject = true; break; }
   
           const invZ = 1 / camVert.z;
@@ -245,7 +265,7 @@ const Level3 = function () {
           const p1 = projected[face[1]];
           const p2 = projected[face[2]];
   
-          // flat shading: approximate the face normal from the world-space
+          // flat shading get the face normal from the world space
           // triangle edges, then modulate brightness by how much it faces
           // the light direction (dot product)
           const e1 = {
@@ -271,16 +291,12 @@ const Level3 = function () {
         }
       }
   
-      drawCockpit();  // written directly into pixelGrid, on top of everything,
-                       // ignoring depth -- it's a fixed 2D overlay, not part
-                       // of the 3D scene
+      drawCockpit();  
       drawPixelGrid();
       drawHUD();
     }
   
-    // -----------------------------------------------------------------
-    // MOTION, COLLISION, RESET -- identical logic to Levels 1 & 2
-    // -----------------------------------------------------------------
+  // ok back to reused game play functions as level 1 and 2
     function update() {
       if (pause || gameOver) return;
       camera.z += SPEED;
@@ -371,7 +387,7 @@ const Level3 = function () {
       canvas.width = cols * PIXEL_SIZE;
       canvas.height = rows * PIXEL_SIZE;
     }
-  
+  //and again init function for abstraction
     function init() {
       camera = { x: 0, y: 0, z: -10 };
       startCam = { x: 0, y: 0, z: -10 };
