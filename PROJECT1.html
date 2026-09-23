@@ -1,0 +1,52 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project1</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #050510;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      display: block;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    #info {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      padding: 12px 14px;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div id="info">
+    <b>
+    </b><br>
+  </div>
+  <script src="objects.js"></script>
+  <script src="Level_1.js"></script>
+  <script src="Level_2.js"></script>
+  <script src="Level_3.js"></script>
+  <script src="controller.js"></script>
+
+</script>
+</body>
+</html>
